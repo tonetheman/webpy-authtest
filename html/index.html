@@ -1,0 +1,29 @@
+<html>
+
+
+<body>
+
+#include "html/header.html"
+
+#include "html/ctx.html"
+
+#if $valid_user
+hey $name you are already logged in
+,click to <a href="/logout">logout</a>...<br />
+#else
+<a href="/reg">register...</a><br />
+<form id="login" name="login" method="POST" action="/login">
+	username:<br /><input type="text" id="username" name="username" /><br />
+	password:<br /><input type="text" id="password" name="password" /><br />
+	<input type="submit" value="login" />
+</form>
+#end if
+
+
+
+#include "html/footer.html"
+
+</body>
+
+
+</html>
