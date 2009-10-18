@@ -48,11 +48,19 @@ def db_user_valid(username, password):
 urls = ("^/$", "MainPage",
 	"^/login$", "LoginPage",
 	"^/logout$", "LogoutPage",
+	"^/bets$", "BetsPage",
 	"^/reg$", "RegPage" )
 app = web.application(urls,globals())
 session = web.session.Session(app,
 	web.session.DiskStore("sessions"),
 	initializer={"valid_user":False, "name" : None})
+
+class BetsPage:
+	def GET(self):
+		t = Template(file="./html/bets.html")
+		t.valid_user = session.valid_user
+		t.user = session.user
+		return str(t)
 
 class LogoutPage:
 	def GET(self):
