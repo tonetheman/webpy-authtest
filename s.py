@@ -29,14 +29,6 @@ cur.execute(sql)
 cur.close()
 del cur
 
-def check_for_cookies():
-	log.debug("checking for cookie name")
-	name = web.cookies().get("name")
-	log.debug("got value for cookie name " + str(name))
-	if name is None:
-		return (False,None)
-	return (False,None)
-
 def make_hash(password):
 	s = hashlib.sha1()
 	s.update(password)
@@ -52,6 +44,17 @@ def db_create_new_user(username, password,email):
 	cur.execute(sql,(username,hashed_password,email))
 	cur.close()
 	db.ctx.commit()
+
+def db_hash_valid(username, hashvalue):
+	cur = db._db_cursor()
+	sql = """select count(*) from
+	user where name=? and password=?"""
+	cur.execute(sql, (username,hashvalue))
+	(counter,) = cur.fetchone()
+	cur.close()
+	if counter == 1:
+		return True
+	return False
 
 def db_user_valid(username, password):
 	cur = db._db_cursor()
@@ -70,6 +73,19 @@ def db_user_valid(username, password):
 	if db_username == username and db_password == hashed_password:
 		return True
 	return False
+
+def check_for_cookies():
+	log.debug("checking for cookie name")
+	name = web.cookies().get("name")
+	log.debug("got value for cookie name " + str(name))
+	if name is None:
+		return (False,None,None)
+	data = name.split(":")
+	if db_hash_valid(data[0],data[1]):
+		return (True,data[0],data[1])
+	else:
+		return (False,None,None)
+
 
 urls = ("^/$", "MainPage",
 	"^/login$", "LoginPage",
@@ -130,15 +146,22 @@ class LoginPage:
 		session.valid_user = valid_user
 		if valid_user:
 			session.name = inp.username
+	
+			# TODO write cookie here!
+			# 3600 = hour * 24 = day * 14 = 14 days
+			value = "%s:%s" % (inp.username, make_hash(inp.password))
+			web.setcookie("name", value, 3600*24*14)
 		raise web.seeother("/")
 
 class MainPage:
 	def GET(self):
 		log.debug("MainPage.GET begin")
-		(c_valid_user, c_name) = check_for_cookies()
+		(c_valid_cookie, c_name, c_password) = check_for_cookies()
+		log.debug("cookie: " + str(c_valid_cookie) + " " + str(c_name) + " " + 
+			str(c_password))
 		t = Template(file="./html/index.html")
 		t.ctx=web.webapi.ctx
-		if c_valid_user:
+		if c_valid_cookie:
 			t.valid_user = True
 			t.name = c_name
 		else:
