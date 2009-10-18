@@ -59,7 +59,7 @@ class BetsPage:
 	def GET(self):
 		t = Template(file="./html/bets.html")
 		t.valid_user = session.valid_user
-		t.user = session.user
+		t.name = session.name
 		return str(t)
 
 class LogoutPage:
