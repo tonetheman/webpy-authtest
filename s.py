@@ -101,10 +101,12 @@ def check_for_cookies():
 
 urls = ("^/$", "MainPage",
 	"^/login$", "LoginPage",
+	"^/loginerr$", "LoginErrPage",
 	"^/logout$", "LogoutPage",
 	"^/bets$", "BetsPage",
 	"^/reg$", "RegPage",
-	"^/regerr$", "RegErrPage" )
+	"^/regerr$", "RegErrPage",
+	"^/passwordreset$", "PasswordResetPage", )
 app = web.application(urls,globals())
 """
 session = web.session.Session(app,
@@ -115,6 +117,11 @@ session = web.session.Session(app,
 	web.session.DBStore(db, "sessions"),
 	initializer={"valid_user":False,"name":None})
 log.debug("session started")
+
+class PasswordResetPage:
+	def GET(self):
+		t = Template(file="./html/passwordreset.html")
+		return str(t)
 
 class BetsPage:
 	def GET(self):
@@ -151,14 +158,26 @@ class RegPage:
 		session.name = inp.username
 		raise web.seeother("/")	
 
+class LoginErrPage:
+	def GET(self):
+		t = Template(file="./html/loginerr.html")
+		return str(t)
+
 class LoginPage:
 	def POST(self):
 		inp = web.input()
+
+		# verify input from web form
 		valid_user = db_user_valid(inp.username,
 			inp.password)
+	
+		# remember it in session object (good or bad does not matter)
 		session.valid_user = valid_user
+
+		# if we have a validated user
 		if valid_user:
 			log.debug("this is a valid user " + inp.username)
+			# save the username
 			session.name = inp.username
 	
 			# TODO write cookie here!
@@ -172,6 +191,10 @@ class LoginPage:
 				super_secret)
 			log.debug("value " + value)
 			web.setcookie("name", value, 3600*24*14)
+		else:
+			raise web.seeother("/loginerr")
+
+		# either way go back to the front page
 		raise web.seeother("/")
 
 class MainPage:
