@@ -35,6 +35,13 @@ def make_hash(password):
 	s.update(SECRET)
 	return s.hexdigest()
 
+def make_supersecret(username,hashed_password):
+	s = hashlib.sha1()
+	s.update(username)
+	s.update(hashed_password)
+	s.update(SUPER_SECRET)
+	return s.hexdigest()
+
 def db_create_new_user(username, password,email):
 	cur = db._db_cursor()
 	sql = """insert into user (name,password,email)
@@ -79,13 +86,18 @@ def check_for_cookies():
 	name = web.cookies().get("name")
 	log.debug("got value for cookie name " + str(name))
 	if name is None:
-		return (False,None,None)
+		return (False,None,None,None)
 	data = name.split(":")
+	"""
 	if db_hash_valid(data[0],data[1]):
 		return (True,data[0],data[1])
 	else:
 		return (False,None,None)
-
+	"""
+	username = data[0]
+	hashed_password = data[1]
+	super_secret = data[2]
+	return (True,username,hashed_password,super_secret)
 
 urls = ("^/$", "MainPage",
 	"^/login$", "LoginPage",
@@ -114,6 +126,7 @@ class BetsPage:
 class LogoutPage:
 	def GET(self):
 		session.kill()
+		web.setcookie("name", "", 0)
 		raise web.seeother("/")
 
 class RegErrPage:
@@ -145,18 +158,26 @@ class LoginPage:
 			inp.password)
 		session.valid_user = valid_user
 		if valid_user:
+			log.debug("this is a valid user " + inp.username)
 			session.name = inp.username
 	
 			# TODO write cookie here!
 			# 3600 = hour * 24 = day * 14 = 14 days
-			value = "%s:%s" % (inp.username, make_hash(inp.password))
+			hashed_password = make_hash(inp.password)
+			log.debug("hashed password " + hashed_password)
+
+			super_secret = make_supersecret(inp.username,hashed_password)
+			log.debug("super secret " + super_secret)
+			value = "%s:%s:%s" % (inp.username, make_hash(inp.password),
+				super_secret)
+			log.debug("value " + value)
 			web.setcookie("name", value, 3600*24*14)
 		raise web.seeother("/")
 
 class MainPage:
 	def GET(self):
 		log.debug("MainPage.GET begin")
-		(c_valid_cookie, c_name, c_password) = check_for_cookies()
+		(c_valid_cookie, c_name, c_password, c_supersecret) = check_for_cookies()
 		log.debug("cookie: " + str(c_valid_cookie) + " " + str(c_name) + " " + 
 			str(c_password))
 		t = Template(file="./html/index.html")
