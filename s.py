@@ -26,6 +26,19 @@ create table if not exists sessions (
 );
 """
 cur.execute(sql)
+sql = """create table if not exists properties (
+pid int primary key, uid int, ptype int,
+ctime timestamp NOT NULL default current_timestamp,
+name varchar(64)
+)
+"""
+cur.execute(sql)
+sql = """create table if not exists properties_type (
+	ptype int primary key,
+	desc varchar(64)
+)
+"""
+cur.execute(sql)
 cur.close()
 del cur
 
@@ -106,7 +119,8 @@ urls = ("^/$", "MainPage",
 	"^/bets$", "BetsPage",
 	"^/reg$", "RegPage",
 	"^/regerr$", "RegErrPage",
-	"^/passwordreset$", "PasswordResetPage", )
+	"^/passwordreset$", "PasswordResetPage", 
+	"^/properties$", "PropertiesPage", )
 app = web.application(urls,globals())
 """
 session = web.session.Session(app,
@@ -117,6 +131,11 @@ session = web.session.Session(app,
 	web.session.DBStore(db, "sessions"),
 	initializer={"valid_user":False,"name":None})
 log.debug("session started")
+
+class PropertiesPage:
+	def GET(self):
+		t = Template(file="./html/properties.html")
+		return str(t)
 
 class PasswordResetPage:
 	def GET(self):
