@@ -101,12 +101,6 @@ def check_for_cookies():
 	if name is None:
 		return (False,None,None,None)
 	data = name.split(":")
-	"""
-	if db_hash_valid(data[0],data[1]):
-		return (True,data[0],data[1])
-	else:
-		return (False,None,None)
-	"""
 	username = data[0]
 	hashed_password = data[1]
 	super_secret = data[2]
