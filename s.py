@@ -14,33 +14,46 @@ SECRET="goofy goober goo"
 SUPER_SECRET="goo goo choo"
 db = web.database(dbn="sqlite", db="./weather.db")
 log.debug("db opened")
+
 cur = db._db_cursor()
-sql = """create table if not exists user 
-(uid int primary key, name,password,email,unique(name))"""
-cur.execute(sql)
 sql = """
 create table if not exists sessions (
-    session_id char(128) UNIQUE NOT NULL,
-    atime timestamp NOT NULL default current_timestamp,
-    data text
-);
-"""
-cur.execute(sql)
-sql = """create table if not exists properties (
-pid int primary key, uid int, ptype int,
-ctime timestamp NOT NULL default current_timestamp,
-name varchar(64)
-)
-"""
-cur.execute(sql)
-sql = """create table if not exists properties_type (
-	ptype int primary key,
-	desc varchar(64)
-)
+session_id char(128) unique not null,
+atime timestamp not null default current_timestamp,
+data text);
 """
 cur.execute(sql)
 cur.close()
 del cur
+
+def db_create():
+	cur = db._db_cursor()
+	sql = """create table if not exists user 
+	(uid int primary key, name,password,email,unique(name))"""
+	cur.execute(sql)
+	sql = """create table if not exists properties (
+	pid int primary key, uid int, ptype int,
+	ctime timestamp NOT NULL default current_timestamp,
+	name varchar(64)
+	)
+	"""
+	cur.execute(sql)
+	sql = """create table if not exists properties_type (
+		ptype int primary key,
+		desc varchar(64), unique(desc)
+	)
+	"""
+	cur.execute(sql)
+	sql = """insert into properties_type (desc) values
+	('Starter Forest')
+	"""
+	cur.execute(sql)
+	sql = """insert into properties_type (desc) values
+	('Starter Cave')
+	"""
+	cur.execute(sql)
+	cur.close()
+	del cur
 
 def make_hash(password):
 	s = hashlib.sha1()
@@ -62,6 +75,13 @@ def db_create_new_user(username, password,email):
 	cur = db._db_cursor()
 	hashed_password = make_hash(password)
 	cur.execute(sql,(username,hashed_password,email))
+	sql = "select uid from user where name=?"
+	cur.execute(sql)
+	(db_uid,) = cur.fetchone()
+	sql = """insert into properties (uid,)
+	values (?,)
+	"""
+	cur.execute(sql)
 	cur.close()
 	db.ctx.commit()
 
@@ -114,7 +134,9 @@ urls = ("^/$", "MainPage",
 	"^/reg$", "RegPage",
 	"^/regerr$", "RegErrPage",
 	"^/passwordreset$", "PasswordResetPage", 
-	"^/properties$", "PropertiesPage", )
+	"^/properties$", "PropertiesPage", 
+	"^/createdb$", "CreateDBPage",)
+
 app = web.application(urls,globals())
 """
 session = web.session.Session(app,
@@ -125,6 +147,12 @@ session = web.session.Session(app,
 	web.session.DBStore(db, "sessions"),
 	initializer={"valid_user":False,"name":None})
 log.debug("session started")
+
+class CreateDBPage:
+	def GET(self):
+		db_create()
+		t = Template(file="./html/createdb.html")
+		return str(t)
 
 class PropertiesPage:
 	def GET(self):
