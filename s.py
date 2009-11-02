@@ -39,17 +39,17 @@ def db_create():
 	"""
 	cur.execute(sql)
 	sql = """create table if not exists properties_type (
-		ptype int primary key,
+		ptype int,
 		desc varchar(64), unique(desc)
 	)
 	"""
 	cur.execute(sql)
-	sql = """insert into properties_type (desc) values
-	('Starter Forest')
+	sql = """insert into properties_type (ptype,desc) values
+	(1, 'Starter Forest')
 	"""
 	cur.execute(sql)
 	sql = """insert into properties_type (desc) values
-	('Starter Cave')
+	(2, 'Starter Cave')
 	"""
 	cur.execute(sql)
 	cur.close()
@@ -74,7 +74,11 @@ def db_create_new_user(username, password,email):
 	values (?,?,?)"""
 	cur = db._db_cursor()
 	hashed_password = make_hash(password)
-	cur.execute(sql,(username,hashed_password,email))
+	try:
+		cur.execute(sql,(username,hashed_password,email))
+	except sqlite3.IntegrityError:
+		cur.close()
+		return False	
 	sql = "select uid from user where name=?"
 	cur.execute(sql)
 	(db_uid,) = cur.fetchone()
@@ -84,6 +88,7 @@ def db_create_new_user(username, password,email):
 	cur.execute(sql)
 	cur.close()
 	db.ctx.commit()
+	return True
 
 def db_hash_valid(username, hashvalue):
 	cur = db._db_cursor()
@@ -193,10 +198,14 @@ class RegPage:
 			session.errstr = E_INVALID_NAME
 			raise web.seeother("/regerr")
 
-		db_create_new_user(inp.username,
+		result = db_create_new_user(inp.username,
 			inp.password, inp.email)
-		session.valid_user = True
-		session.name = inp.username
+		if result:
+			session.valid_user = True
+			session.name = inp.username
+		else:
+			# TODO: you really did not get reg'd
+			pass
 		raise web.seeother("/")	
 
 class LoginErrPage:
