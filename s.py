@@ -2,6 +2,9 @@ import web, sqlite3, hashlib,re
 import logging as log
 from Cheetah.Template import Template
 
+L0_MAX_ENERGY=10
+L0_BUMP=5
+
 log.basicConfig(filename="./dbg.log",level=log.DEBUG)
 
 web.config.debug = False
@@ -29,7 +32,7 @@ del cur
 def db_create():
 	cur = db._db_cursor()
 	sql = """create table if not exists user 
-	(uid int primary key, name,password,email,unique(name))"""
+	(uid integer primary key , name,password,email,unique(name))"""
 	cur.execute(sql)
 	sql = """create table if not exists properties (
 	pid int primary key, uid int, ptype int,
@@ -40,7 +43,7 @@ def db_create():
 	cur.execute(sql)
 	sql = """create table if not exists properties_type (
 		ptype int,
-		desc varchar(64), unique(desc)
+		desc varchar(64)
 	)
 	"""
 	cur.execute(sql)
@@ -48,8 +51,15 @@ def db_create():
 	(1, 'Starter Forest')
 	"""
 	cur.execute(sql)
-	sql = """insert into properties_type (desc) values
+	sql = """insert into properties_type (ptype,desc) values
 	(2, 'Starter Cave')
+	"""
+	cur.execute(sql)
+	sql = """create table if not exists energy_state (
+		uid int primary key, max_energy int,
+		current_energy int,
+		bump_energy int
+	)
 	"""
 	cur.execute(sql)
 	cur.close()
@@ -68,6 +78,29 @@ def make_supersecret(username,hashed_password):
 	s.update(SUPER_SECRET)
 	return s.hexdigest()
 
+def db_get_energy(username):
+	cur = db._db_cursor()
+	sql = """select uid from user
+	where name = ?
+	"""
+	cur.execute(sql, (username,))
+	data = cur.fetchone()
+	if data is None:
+		cur.close()
+		return None
+	(db_uid,) = data
+	sql = """
+	select current_energy, max_energy from
+	energy_state where uid= ?
+	"""
+	cur.execute(sql, (db_uid,))
+	data = cur.fetchone()
+	if data is None:
+		return None
+	(cur_energy,max_energy) = data
+	cur.close()
+	return (cur_energy,max_energy)
+
 def db_create_new_user(username, password,email):
 	cur = db._db_cursor()
 	sql = """insert into user (name,password,email)
@@ -80,12 +113,16 @@ def db_create_new_user(username, password,email):
 		cur.close()
 		return False	
 	sql = "select uid from user where name=?"
-	cur.execute(sql)
+	cur.execute(sql, (username,))
 	(db_uid,) = cur.fetchone()
-	sql = """insert into properties (uid,)
-	values (?,)
+	# sql = """insert into properties (uid,)
+	# values (?,)
+	# """
+	# cur.execute(sql, (db_uid,))
+	sql = """insert into energy_state (uid,max_energy,
+	current_energy,bump_energy) values (?,?,?,?)
 	"""
-	cur.execute(sql)
+	cur.execute(sql, (db_uid,L0_MAX_ENERGY,L0_MAX_ENERGY,L0_BUMP))
 	cur.close()
 	db.ctx.commit()
 	return True
@@ -258,9 +295,17 @@ class MainPage:
 		if c_valid_cookie:
 			t.valid_user = True
 			t.name = c_name
+			data = db_get_energy(c_name)
+			if data is None:
+				t.max_energy = 0
+				t.current_energy = 0
+			else:
+				(t.max_energy, t.current_energy) = data
 		else:
 			t.valid_user = session.valid_user
 			t.name = session.name
+			t.max_energy = 0
+			t.current_energy = 0
 
 		log.debug("MainPage.GET end")
 		return str(t)
