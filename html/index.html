@@ -1,19 +1,48 @@
-<html>
-
-
-<body>
 
 #include "html/header.html"
 
+<!--
 #include "html/ctx.html"
+-->
 
 #if $valid_user
 hey $name you are already logged in
 ,click to <a href="/logout">logout</a>...<br />
+<!--
 here are your <a href="/bets">bets</a><br />
 here is the list of your <a href="/properties">properties</a><br />
+-->
+
+<div class="span-8">
+<bold>Stats</bold>
 Current energy in the game: $current_energy<br />
 Max energy in the game: $max_energy<br />
+</div>
+<div class="span-8">
+list of properties here
+</div>
+<div class="span-8 last">
+list of loot here
+</div>
+
+<div class="span-24 last">
+&nbsp;
+</div>
+
+<div class="span-8 colborder">
+<a href="/dig">dig</a> for gems<br />
+<a href="/cast">cast</a> spells<br />
+<a href="/purchase">purchase</a> stuff with loot<br />
+</div>
+<div class="span-8">
+<a href="/travel">travel</a><br />
+<a href="/quest">quests</a><br />
+<a href="/buy">buy</a> things with real money<br />
+</div>
+<div class="span-8 last">
+character pic here
+</div>
+
 #else
 <a href="/reg">register...</a><br />
 <form id="login" name="login" method="POST" action="/login">
@@ -21,13 +50,11 @@ Max energy in the game: $max_energy<br />
 	password:<br /><input type="text" id="password" name="password" /><br />
 	<input type="submit" value="login" />
 </form>
+
+more information about the game here
+
 #end if
 
 
 
 #include "html/footer.html"
-
-</body>
-
-
-</html>
